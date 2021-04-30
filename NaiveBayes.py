@@ -1,24 +1,21 @@
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.naive_bayes import GaussianNB
+from sklearn.metrics import accuracy_score
+from math import copysign, log10, sqrt
 import matplotlib.pyplot as plt
+from multiprocessing import Pool
+import multiprocessing as mp
 from random import randrange
 from csv import reader
-from math import copysign, log10, sqrt
+from GIST import GIST
+from PIL import Image
+import pandas as pd
+import numpy as np
 import time
 import os
 import cv2
-import pandas as pd
-import numpy as np
-from sklearn.naive_bayes import GaussianNB
-from sklearn.model_selection import train_test_split
 import time
-from sklearn.metrics import accuracy_score
-from sklearn.preprocessing import MinMaxScaler
-from GIST import GIST
-import multiprocessing as mp
-from PIL import Image
-import time
-from multiprocessing import Pool
-from numpy import savetxt
-from numpy import loadtxt
 
 
 
@@ -64,11 +61,11 @@ def prepare_data():
 
 
 def prepare_mini_data():
-    artists = os.listdir("dataset/abstractart")
+    artists = os.listdir("dataset/impressionism")
     for artist in artists:
-        images = os.listdir("dataset/abstractart/"+artist)
+        images = os.listdir("dataset/impressionism/"+artist)
         for image in images:
-            img = cv2.imread("dataset/abstractart/"+artist+"/"+image)
+            img = cv2.imread("dataset/impressionism/"+artist+"/"+image)
             if img is not None:
                 img = cv2.resize(img, fixed_size)
                 image_list.append(img)
@@ -80,6 +77,7 @@ def prepare_mini_data():
     
 def get_feature_vec():
     p = Pool()
+    print("in pool")
     hu_moments_list = p.map(get_hu_moments, image_list)
     histogram_list = p.map(get_histogram, image_list)
     gist_list = p.map(get_gist, image_list)
@@ -110,28 +108,21 @@ artist_list = list()
 movement_list = list()
 feature_list = list()
 
-start = time.time()
+
 prepare_data()
-end = time.time()
-print("DATA PREPARETION TIME =", (end-start)/60)
 
 
-start = time.time()
 X = get_feature_vec()
-end = time.time()
-print("FEATURE EXTRACTION TIME =", (end-start)/60)
 y = np.array(artist_list)
-
-
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 gnb = GaussianNB()
 y_pred = gnb.fit(X_train, y_train).predict(X_test)
+
+
 print("ARTIST CLASSIFICATION")
 print("Number of mislabeled points out of a total %d points : %d"% (X_test.shape[0], (y_test != y_pred).sum()))
 score = accuracy_score(y_test, y_pred)
 print("Score = ", score)
-
-
 
 
 print("--------------------------")
@@ -144,19 +135,3 @@ y_pred = gnb.fit(X_train, y_train).predict(X_test)
 print("Number of mislabeled points out of a total %d points : %d"% (X_test.shape[0], (y_test != y_pred).sum()))
 score = accuracy_score(y_test, y_pred)
 print("Score = ", score)
-
-""" score2 = gnb.score(X_test, y_test, sample_weight=None)
-
-print("Score2 = ", score2)
- """
-
-
-
-
-"""     # Calculate Moments
-    moments = cv2.moments(img)
-    # Calculate Hu Moments
-    huMoments = cv2.HuMoments(moments)
-    # Log scale hu moments
-    for i in range(0,7):
-        huMoments[i] = -1* copysign(1.0, huMoments[i]) * log10(abs(huMoments[i])) """
