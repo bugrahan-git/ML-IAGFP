@@ -16,7 +16,7 @@ param = {
     "boundaryExtension": 32
 }
 
-fixed_size = tuple((250, 250))
+fixed_size = tuple((32, 32))
 
 image_list = list()
 artist_list = list()
@@ -67,17 +67,19 @@ def prepare_data(isAugmented=False):
     movements_dict = {}
 
     print("Preparing the data...")
-    movements = os.listdir("../../dataset")
+    movements = os.listdir("../dataset")
     for movement in movements:
-        artists = os.listdir("dataset/" + movement)
+        artists = os.listdir("../dataset/" + movement)
         movement_tmp = []
         for artist in artists:
-            images = os.listdir("dataset/" + movement + "/" + artist)
+            images = os.listdir("../dataset/" + movement + "/" + artist)
             artist_tmp = []
             for image in images:
-                img = cv2.imread("dataset/" + movement + "/" + artist + "/" + image)
+                img = cv2.imread("../dataset/" + movement + "/" + artist + "/" + image)
                 if img is not None:
-                    img = cv2.resize(img, fixed_size)
+                    img = cv2.resize(img, fixed_size)  # resize to 32x32
+                    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # gray color
+                    img = np.divide(img, 255)  # normalize
                     image_list.append(img)
                     artist_tmp.append(img)
                     artist_list.append(artist)
@@ -98,44 +100,62 @@ def prepare_data(isAugmented=False):
             if counter[artist] < counter[max_key]:
                 for i in range(counter[max_key] - counter[artist]):
                     transformed_image = t.transform_image(random.choice(artists_dict[artist]),
-                                                          "dataset/" + artist_movement + "/" + artist)
+                                                          "../dataset/" + artist_movement + "/" + artist)
                     image_list.append(transformed_image)
                     movement_list.append(artist_movement)
                     artist_list.append(artist)
 
     X_train_artist, X_test_artist, y_train_artist, y_test_artist = train_test_split(image_list, artist_list,
                                                                                     test_size=0.2, random_state=42)
+    X_train_artist, X_validation_artist, y_train_artist, y_validation_artist = train_test_split(X_train_artist,
+                                                                                                y_train_artist,
+                                                                                                test_size=0.25,
+                                                                                                random_state=42)
 
+    # TRAIN ARTIST
     c = list(zip(X_train_artist, y_train_artist))
     train_images_artist, train_labels_artist = zip(*c)
-
     train_artist = {"images": train_images_artist, "artists": train_labels_artist}
-    io.savemat(f"dataset/mat/train_artist.mat", train_artist)
-
+    io.savemat(f"../mat/train_artist.mat", train_artist)
+    # VALIDATION ARTIST
+    c = list(zip(X_validation_artist, y_validation_artist))
+    validation_images_artist, validation_labels_artist = zip(*c)
+    validation_artist = {"images": validation_images_artist, "artists": validation_labels_artist}
+    io.savemat(f"../mat/validation_artist.mat", validation_artist)
+    # TEST ARTIST
     c = list(zip(X_test_artist, y_test_artist))
     test_images_artist, test_labels_artist = zip(*c)
-
     test_artist = {"images": test_images_artist, "artists": test_labels_artist}
-    io.savemat(f"dataset/mat/test_artist.mat", test_artist)
+    io.savemat(f"../mat/test_artist.mat", test_artist)
 
     X_train_movement, X_test_movement, y_train_movement, y_test_movement = train_test_split(image_list, movement_list,
                                                                                             test_size=0.2,
                                                                                             random_state=42)
 
+    X_train_movement, X_validation_movement, y_train_movement, y_validation_movement = train_test_split(
+        X_train_movement, y_train_movement,
+        test_size=0.25, random_state=42)
+
+    # TRAIN MOVEMENT
     c = list(zip(X_train_movement, y_train_movement))
     train_images_movement, train_labels_movement = zip(*c)
-
     train_movement = {"images": train_images_movement, "movements": train_labels_movement}
-    io.savemat(f"dataset/mat/train_movement.mat", train_movement)
+    io.savemat(f"../mat/train_movement.mat", train_movement)
 
+    # VALIDATION MOVEMENT
+    c = list(zip(X_validation_movement, y_validation_movement))
+    validation_images_movement, validation_labels_movement = zip(*c)
+    validation_movement = {"images": validation_images_movement, "movements": validation_labels_movement}
+    io.savemat(f"../mat/validation_movement.mat", validation_movement)
+
+    # TEST MOVEMENT
     c = list(zip(X_test_movement, y_test_movement))
     test_images_movement, test_labels_movement = zip(*c)
-
     test_movement = {"images": test_images_movement, "movements": test_labels_movement}
-    io.savemat(f"dataset/mat/test_movement.mat", test_movement)
+    io.savemat(f"../mat/test_movement.mat", test_movement)
 
 
-def get_feature_vec(arr):
+def get_feature_vec(arr, labels):
     hu_moments_list = []
     histogram_list = []
     gist_list = []
@@ -161,44 +181,52 @@ def get_images(filepath, artistOrMovement):
 
 
 def extract_features_artist():
-    X_train, y_train = get_images("dataset/mat/train_artist.mat", "artists")
-    X_train = get_feature_vec(X_train)
-
+    # train
+    X_train, y_train = get_images("../mat/train_artist.mat", "artists")
+    X_train = get_feature_vec(X_train, y_train)
     c = list(zip(X_train, y_train))
     train_images_artist, train_labels_artist = zip(*c)
-
     train_artist = {"images": train_images_artist, "artists": train_labels_artist}
-    io.savemat(f"dataset/mat/train_artist.mat", train_artist)
-
-    X_test, y_test = get_images("dataset/mat/test_artist.mat", "artists")
-    X_test = get_feature_vec(X_test)
-
+    io.savemat(f"../mat/train_artist.mat", train_artist)
+    # validation
+    X_validation, y_validation = get_images("../mat/validation_artist.mat", "artists")
+    X_validation = get_feature_vec(X_validation, y_validation)
+    c = list(zip(X_validation, y_validation))
+    validation_images_artist, validation_labels_artist = zip(*c)
+    validation_artist = {"images": validation_images_artist, "artists": validation_labels_artist}
+    io.savemat(f"../mat/validation_artist.mat", validation_artist)
+    # test
+    X_test, y_test = get_images("../mat/test_artist.mat", "artists")
+    X_test = get_feature_vec(X_test, y_test)
     c = list(zip(X_test, y_test))
     test_images_artist, test_labels_artist = zip(*c)
-
     test_artist = {"images": test_images_artist, "artists": test_labels_artist}
-    io.savemat(f"dataset/mat/test_artist.mat", test_artist)
+    io.savemat(f"../mat/test_artist.mat", test_artist)
 
-    return X_train, y_train, X_test, y_test
+    return X_train, y_train, X_validation, y_validation, X_test, y_test
 
 
 def extract_features_movement():
-    X_train, y_train = get_images("dataset/mat/train_movement.mat", "movements")
-    X_train = get_feature_vec(X_train)
-
+    # train
+    X_train, y_train = get_images("../mat/train_movement.mat", "movements")
+    X_train = get_feature_vec(X_train, y_train)
     c = list(zip(X_train, y_train))
     train_images_movement, train_labels_artist = zip(*c)
-
     train_artist = {"images": train_images_movement, "movements": train_labels_artist}
-    io.savemat(f"dataset/mat/train_movement.mat", train_artist)
-
-    X_test, y_test = get_images("dataset/mat/test_movement.mat", "movements")
-    X_test = get_feature_vec(X_test)
-
+    io.savemat(f"../mat/train_movement.mat", train_artist)
+    # validation
+    X_validation, y_validation = get_images("../mat/validation_movement.mat", "movements")
+    X_validation = get_feature_vec(X_validation, y_validation)
+    c = list(zip(X_validation, y_validation))
+    validation_images_movement, validation_labels_artist = zip(*c)
+    validation_artist = {"images": validation_images_movement, "movements": validation_labels_artist}
+    io.savemat(f"../mat/train_movement.mat", validation_artist)
+    # test
+    X_test, y_test = get_images("../mat/test_movement.mat", "movements")
+    X_test = get_feature_vec(X_test, y_test)
     c = list(zip(X_test, y_test))
     test_images_movement, test_labels_movement = zip(*c)
-
     test_artist = {"images": test_images_movement, "movements": test_labels_movement}
-    io.savemat(f"dataset/mat/test_movement.mat", test_artist)
+    io.savemat(f"../mat/test_movement.mat", test_artist)
 
-    return X_train, y_train, X_test, y_test
+    return X_train, y_train, X_validation, y_validation, X_test, y_test

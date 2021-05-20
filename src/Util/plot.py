@@ -64,10 +64,14 @@ def pie():
     plot_pie_chart(movement_list, "Movement Distribution After Data Augmentation")
 
 
-def line(X, y, xLabel, yLabel, title, color="yellowgreen"):
-    plt.xlabel(xLabel)
-    plt.ylabel(yLabel)
+def line(train, validation, xLabel, yLabel, title):
+    plt.plot(train, 'b--')
+    plt.plot(validation, 'r-')
     plt.title(title)
-    plt.plot(X, y, color=color)
-    plt.savefig("plots/" + title + '.png')
-    plt.show()
+    plt.ylabel(yLabel)
+    plt.xlabel(xLabel)
+    plt.legend(['train', 'val'])
+    title = " ".join(title.split('\n'))
+    plt.savefig("../plots/" + title + '.png')
+    plt.clf()
+

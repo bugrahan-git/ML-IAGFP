@@ -23,3 +23,6 @@ Shapely==1.7.1
 six==1.16.0
 threadpoolctl==2.1.0
 tifffile==2021.4.8
+
+Keras~=2.4.3
+tensorflow~=2.5.0
